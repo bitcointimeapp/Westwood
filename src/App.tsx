@@ -200,7 +200,7 @@ function App() {
 
           {/* Hero Bild */}
           <img 
-            src="/westwood-hero.jpg" 
+            src="/westwood-hero.png" 
             alt="Westwood Restaurant" 
             style={{ width: '100%', height: '220px', objectFit: 'cover', borderRadius: '0 0 16px 16px' }} 
           />
