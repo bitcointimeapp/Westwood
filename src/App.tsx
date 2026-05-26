@@ -241,7 +241,7 @@ function App() {
             }}>
               Westwood
             </h1>
-            <p style={{ color: '#f59e0b', fontSize: '1rem', margin: '0 0 0.8rem 0', letterSpacing: '1px' }}>KITCHEN & BAR</p>
+            <p style={{ color: '#F4F4F6', fontSize: '1rem', margin: '0 0 0.8rem 0', letterSpacing: '1px' }}>KITCHEN & BAR</p>
             <p style={{ color: '#f59e0b', fontSize: '1.1rem' }}>{t.subtitle}</p>
 
             <div style={{ fontSize: '1rem', color: '#ddd', lineHeight: '1.6', marginTop: '1.2rem' }}>
