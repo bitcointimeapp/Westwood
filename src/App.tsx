@@ -8,6 +8,7 @@ function App() {
   const [activeTab, setActiveTab] = useState<Tab>('home')
   const [blockHeight, setBlockHeight] = useState<number | null>(null)
   const [btcPrice, setBtcPrice] = useState<any>(null)
+  const [priceHistory, setPriceHistory] = useState<number[]>([])
   const [searchTerm, setSearchTerm] = useState('')
 
   // Reservierung
@@ -77,20 +78,34 @@ function App() {
     )
     .sort((a, b) => a.term.localeCompare(b.term))
 
-  // Live Blockchain Daten
+  // Live Blockchain + Preis Daten + 1-Jahres Chart
   useEffect(() => {
     const fetchData = async () => {
       try {
         const blockRes = await fetch('https://mempool.space/api/blocks/tip/height')
-        setBlockHeight(parseInt(await blockRes.text()))
+        if (blockRes.ok) setBlockHeight(parseInt(await blockRes.text()))
 
         const priceRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd,eur,vnd')
-        const data = await priceRes.json()
-        setBtcPrice(data.bitcoin)
-      } catch (e) {}
+        if (priceRes.ok) {
+          const data = await priceRes.json()
+          setBtcPrice(data.bitcoin)
+        }
+
+        const historyRes = await fetch(
+          'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=vnd&days=365&interval=daily'
+        )
+        if (historyRes.ok) {
+          const historyData = await historyRes.json()
+          const prices = historyData.prices.map((item: [number, number]) => item[1])
+          setPriceHistory(prices)
+        }
+      } catch (e) {
+        console.error("API Fehler:", e)
+      }
     }
+
     fetchData()
-    const interval = setInterval(fetchData, 10000)
+    const interval = setInterval(fetchData, 300000) // alle 5 Minuten
     return () => clearInterval(interval)
   }, [])
 
@@ -101,9 +116,23 @@ function App() {
   }[language]
 
   const calculateSats = (vndPrice: number) => {
-    if (!btcPrice?.vnd) return '0';
+    if (!btcPrice?.vnd || btcPrice.vnd === 0) return '0';
     const sats = Math.round((vndPrice / btcPrice.vnd) * 100000000);
     return sats.toLocaleString();
+  }
+
+  const generateChartPoints = () => {
+    if (priceHistory.length < 5) return "20,65 520,65";
+    const max = Math.max(...priceHistory);
+    const min = Math.min(...priceHistory);
+    const range = max - min || 1;
+
+    const points = priceHistory.map((price, index) => {
+      const x = 20 + (index / (priceHistory.length - 1)) * 480;
+      const y = 70 - ((price - min) / range) * 55;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    return points;
   }
 
   const menuDrinks = [
@@ -171,7 +200,7 @@ function App() {
 
           {/* Hero Bild */}
           <img 
-            src="/westwood-hero.png" 
+            src="/westwood-hero.jpg" 
             alt="Westwood Restaurant" 
             style={{ width: '100%', height: '220px', objectFit: 'cover', borderRadius: '0 0 16px 16px' }} 
           />
@@ -193,7 +222,6 @@ function App() {
 
           {/* Logo + Kontakt */}
           <div style={{ textAlign: 'center' }}>
-            {/* Westwood Logo (weißes Symbol) */}
             <img 
               src="/westwood-logo.png" 
               alt="Westwood Logo" 
@@ -213,7 +241,7 @@ function App() {
             }}>
               Westwood
             </h1>
-            <p style={{ color: '#F4F4F6', fontSize: '1rem', margin: '0 0 0.8rem 0', letterSpacing: '1px' }}>KITCHEN & BAR</p>
+            <p style={{ color: '#f59e0b', fontSize: '1rem', margin: '0 0 0.8rem 0', letterSpacing: '1px' }}>KITCHEN & BAR</p>
             <p style={{ color: '#f59e0b', fontSize: '1.1rem' }}>{t.subtitle}</p>
 
             <div style={{ fontSize: '1rem', color: '#ddd', lineHeight: '1.6', marginTop: '1.2rem' }}>
@@ -257,7 +285,6 @@ function App() {
             <div style={{ background: '#4a1a1b', padding: '1.5rem', borderRadius: '16px' }}>
               <h3 style={{ color: '#f59e0b', marginBottom: '1.5rem' }}>{t.menu}</h3>
 
-              {/* Getränke */}
               <div onClick={() => setOpenCategory(openCategory === 'drinks' ? null : 'drinks')} 
                    style={{ cursor: 'pointer', padding: '12px', background: '#3a1415', borderRadius: '12px', marginBottom: '8px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
@@ -275,7 +302,6 @@ function App() {
                 ))}
               </div>
 
-              {/* Essen */}
               <div onClick={() => setOpenCategory(openCategory === 'food' ? null : 'food')} 
                    style={{ cursor: 'pointer', padding: '12px', background: '#3a1415', borderRadius: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
@@ -306,8 +332,7 @@ function App() {
                   <button onClick={() => { 
                     setReservationStep('form'); 
                     setReservation({ date: '', time: '', people: '2', name: '', phone: '' }); 
-                  }} 
-                    style={{ marginTop: '2rem', color: '#ddd', background: 'none', border: 'none' }}>
+                  }} style={{ marginTop: '2rem', color: '#ddd', background: 'none', border: 'none' }}>
                     {t.newReservation}
                   </button>
                 </div>
@@ -390,11 +415,26 @@ function App() {
             </div>
           )}
 
-          {/* Live Daten */}
-          <div style={{ marginTop: '2.5rem', background: '#4a1a1b', padding: '14px', borderRadius: '16px', textAlign: 'center', fontSize: '0.95rem' }}>
+          {/* Live Daten mit 1-Jahres Chart */}
+          <div style={{ marginTop: '2.5rem', background: '#4a1a1b', padding: '16px', borderRadius: '16px', textAlign: 'center', border: '1px solid #f59e0b' }}>
             <div>Block Height: <span style={{ color: '#f59e0b' }}>{blockHeight ? `#${blockHeight.toLocaleString()}` : 'Laden...'}</span></div>
-            <div style={{ marginTop: '6px' }}>
-              BTC: {btcPrice ? `$${btcPrice.usd.toLocaleString()} • €${btcPrice.eur.toLocaleString()} • ₫${(btcPrice.vnd/1000000000).toFixed(2)}B` : 'Laden...'}</div>
+            <div style={{ marginTop: '6px', color: '#f59e0b', fontWeight: '600' }}>
+              BTC: {btcPrice ? `$${btcPrice.usd.toLocaleString()} • €${btcPrice.eur.toLocaleString()} • ₫${(btcPrice.vnd/1000000000).toFixed(2)}B` : 'Laden...'}
+            </div>
+
+            <div style={{ margin: '16px 0 10px 0', minHeight: '90px' }}>
+              {priceHistory.length > 5 ? (
+                <svg width="100%" height="90" viewBox="0 0 520 90" style={{ filter: 'drop-shadow(0 4px 15px #f59e0b)' }}>
+                  <polyline points={generateChartPoints()} fill="none" stroke="#f59e0b" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+                  <polyline points={generateChartPoints()} fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
+                </svg>
+              ) : (
+                <div style={{ height: '90px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f59e0b' }}>
+                  Lade Bitcoin Chart...
+                </div>
+              )}
+            </div>
+            <div style={{ fontSize: '0.85rem', color: '#f59e0b' }}>1-Jahres Bitcoin Kurs • Vietnam</div>
           </div>
 
           {/* Copyright */}
