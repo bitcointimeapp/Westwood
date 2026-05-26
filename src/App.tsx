@@ -434,7 +434,7 @@ function App() {
                 </div>
               )}
             </div>
-            <div style={{ fontSize: '0.85rem', color: '#f59e0b' }}>1-Jahres Bitcoin Kurs • Vietnam</div>
+            <div style={{ fontSize: '0.85rem', color: '#f59e0b' }}>1-Jahres Bitcoin Kurs</div>
           </div>
 
           {/* Copyright */}
